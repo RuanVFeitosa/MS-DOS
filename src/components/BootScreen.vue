@@ -1,5 +1,5 @@
 <template>
-  <div class="boot-screen">
+  <div class="boot-screen" tabindex="0" @click="handleFirstInteraction" @keydown="handleFirstInteraction">
     <div class="boot-content">
       <pre class="ascii-logo">{{ asciiArt }}</pre>
       <div class="boot-messages">
@@ -39,6 +39,7 @@ const messages = [
 ]
 const visibleMessages = ref<string[]>([])
 const readyToContinue = ref(false)
+const firstInteraction = ref(false) // controle para tocar áudio uma vez
 let progressInterval: number | null = null
 let msgIndex = 0
 
@@ -82,31 +83,39 @@ const asciiArt = `≈∞≈∞≈≈
                                                  ∞∞`
 
 const boot = () => {
-  // Toca som de boot no início
-  audio.playBoot()
-
   progressInterval = setInterval(() => {
     if (progress.value < 100) {
       progress.value += 1
       if (progress.value % 14 === 0 && msgIndex < messages.length) {
-        visibleMessages.value.push(messages[msgIndex])
+        visibleMessages.value.push(messages[msgIndex] ?? '')
         msgIndex++
       }
     } else {
       if (progressInterval) clearInterval(progressInterval)
-      // Toca som de sucesso
-      audio.playSuccess()
-      // Toca som de "pronto" após um breve delay
-      setTimeout(() => {
-        audio.playReady()
-        readyToContinue.value = true
-      }, 500)
+      // Não toca áudio aqui, será tocado na primeira interação
+      readyToContinue.value = true
     }
   }, 35)
 }
 
-// Aguarda qualquer tecla para continuar
-const handleKeyPress = () => {
+// Primeira interação do usuário (clique ou tecla)
+const handleFirstInteraction = () => {
+  if (!firstInteraction.value) {
+    firstInteraction.value = true
+    // Resume o AudioContext e toca os sons
+    audio.resume()
+    audio.playBoot()
+    setTimeout(() => {
+      audio.playSuccess()
+      setTimeout(() => {
+        audio.playReady()
+      }, 500)
+    }, 300)
+  }
+}
+
+// Aguarda qualquer tecla para continuar (após o boot completo)
+const handleKeyPress = (event: KeyboardEvent) => {
   if (readyToContinue.value) {
     emit('boot-complete')
   }
@@ -120,8 +129,12 @@ const handleClick = () => {
 
 onMounted(() => {
   boot()
+  // Adiciona eventos para capturar teclas e cliques
   window.addEventListener('keydown', handleKeyPress)
   window.addEventListener('click', handleClick)
+  // Foca no elemento para capturar eventos de tecla
+  const el = document.querySelector('.boot-screen') as HTMLElement
+  if (el) el.focus()
 })
 
 onUnmounted(() => {
@@ -146,7 +159,8 @@ onUnmounted(() => {
   font-family: 'Courier New', monospace;
   color: #00ff00;
   overflow: hidden;
-  outline: none; /* remove focus outline */
+  outline: none;
+  cursor: default;
 }
 
 .boot-content {
@@ -243,7 +257,6 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .ascii-logo {
     font-size: clamp(0.25rem, 0.5vw, 0.6rem);
-    line-height: 1.0;
   }
   .boot-messages {
     min-height: 70px;

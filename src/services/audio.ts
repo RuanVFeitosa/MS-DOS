@@ -1,187 +1,151 @@
 // src/services/audio.ts
-
 class AudioService {
-  private audioCtx: AudioContext | null = null;
+  private audioContext: AudioContext | null = null
+  private initialized = false
+  private pendingBootSound: boolean = false
 
   private init() {
-    if (!this.audioCtx) {
-      this.audioCtx = new (
-        window.AudioContext || (window as any).webkitAudioContext
-      )();
+    if (!this.initialized) {
+      try {
+        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+        this.initialized = true
+        // Se houver som pendente, toca agora
+        if (this.pendingBootSound) {
+          this.playBoot()
+          this.pendingBootSound = false
+        }
+      } catch (e) {
+        console.warn('Web Audio API não suportada')
+      }
     }
-    // Resume se estiver suspenso (necessário após interação do usuário)
-    if (this.audioCtx.state === "suspended") {
-      this.audioCtx.resume();
-    }
-    return this.audioCtx;
   }
 
-  // Som de tecla (clique curto)
+  // Método para garantir que o contexto seja iniciado por interação do usuário
+  public resume() {
+    this.init()
+    if (this.audioContext && this.audioContext.state === 'suspended') {
+      this.audioContext.resume()
+    }
+  }
+
   playKeyPress() {
+    this.init()
+    if (!this.audioContext) return
     try {
-      const ctx = this.init();
-      if (!ctx) return;
-
-      const oscillator = ctx.createOscillator();
-      const gain = ctx.createGain();
-      oscillator.connect(gain);
-      gain.connect(ctx.destination);
-
-      oscillator.type = "sine";
-      oscillator.frequency.setValueAtTime(800, ctx.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(
-        600,
-        ctx.currentTime + 0.02,
-      );
-
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
-
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.05);
-    } catch (e) {
-      // Silencia erros de áudio
-    }
+      const oscillator = this.audioContext.createOscillator()
+      const gainNode = this.audioContext.createGain()
+      oscillator.connect(gainNode)
+      gainNode.connect(this.audioContext.destination)
+      oscillator.frequency.value = 800
+      oscillator.type = 'sine'
+      gainNode.gain.setValueAtTime(0.08, this.audioContext.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.04)
+      oscillator.start(this.audioContext.currentTime)
+      oscillator.stop(this.audioContext.currentTime + 0.04)
+    } catch (e) {}
   }
 
-  // Som de Enter (beep médio)
   playEnter() {
+    this.init()
+    if (!this.audioContext) return
     try {
-      const ctx = this.init();
-      if (!ctx) return;
-
-      const oscillator = ctx.createOscillator();
-      const gain = ctx.createGain();
-      oscillator.connect(gain);
-      gain.connect(ctx.destination);
-
-      oscillator.type = "square";
-      oscillator.frequency.setValueAtTime(440, ctx.currentTime);
-
-      gain.gain.setValueAtTime(0.1, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
-
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.08);
-    } catch (e) {
-      // Silencia erros
-    }
+      const oscillator = this.audioContext.createOscillator()
+      const gainNode = this.audioContext.createGain()
+      oscillator.connect(gainNode)
+      gainNode.connect(this.audioContext.destination)
+      oscillator.frequency.value = 600
+      oscillator.type = 'sine'
+      gainNode.gain.setValueAtTime(0.12, this.audioContext.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.08)
+      oscillator.start(this.audioContext.currentTime)
+      oscillator.stop(this.audioContext.currentTime + 0.08)
+    } catch (e) {}
   }
 
-  // Som de erro (buzzer)
   playError() {
+    this.init()
+    if (!this.audioContext) return
     try {
-      const ctx = this.init();
-      if (!ctx) return;
-
-      const oscillator = ctx.createOscillator();
-      const gain = ctx.createGain();
-      oscillator.connect(gain);
-      gain.connect(ctx.destination);
-
-      oscillator.type = "sawtooth";
-      oscillator.frequency.setValueAtTime(150, ctx.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(
-        80,
-        ctx.currentTime + 0.2,
-      );
-
-      gain.gain.setValueAtTime(0.15, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 0.2);
-    } catch (e) {
-      // Silencia erros
-    }
+      const oscillator = this.audioContext.createOscillator()
+      const gainNode = this.audioContext.createGain()
+      oscillator.connect(gainNode)
+      gainNode.connect(this.audioContext.destination)
+      oscillator.frequency.value = 440
+      oscillator.type = 'square'
+      gainNode.gain.setValueAtTime(0.15, this.audioContext.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.15)
+      oscillator.start(this.audioContext.currentTime)
+      oscillator.stop(this.audioContext.currentTime + 0.15)
+    } catch (e) {}
   }
 
-  // Som de boot (beep ascendente)
   playBoot() {
-    try {
-      const ctx = this.init();
-      if (!ctx) return;
-
-      // Primeiro beep curto
-      let osc = ctx.createOscillator();
-      let gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(600, ctx.currentTime);
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.1);
-
-      // Segundo beep mais agudo após 0.15s
+    this.init()
+    if (!this.audioContext) {
+      // Marca como pendente para tocar quando o contexto for inicializado
+      this.pendingBootSound = true
+      return
+    }
+    const frequencies = [523, 659, 784, 1047]
+    frequencies.forEach((freq, i) => {
       setTimeout(() => {
         try {
-          const osc2 = ctx.createOscillator();
-          const gain2 = ctx.createGain();
-          osc2.connect(gain2);
-          gain2.connect(ctx.destination);
-          osc2.type = "sine";
-          osc2.frequency.setValueAtTime(900, ctx.currentTime + 0.15);
-          gain2.gain.setValueAtTime(0.08, ctx.currentTime + 0.15);
-          gain2.gain.exponentialRampToValueAtTime(
-            0.001,
-            ctx.currentTime + 0.25,
-          );
-          osc2.start(ctx.currentTime + 0.15);
-          osc2.stop(ctx.currentTime + 0.25);
+          const osc = this.audioContext!.createOscillator()
+          const gain = this.audioContext!.createGain()
+          osc.connect(gain)
+          gain.connect(this.audioContext!.destination)
+          osc.frequency.value = freq
+          osc.type = 'sine'
+          gain.gain.setValueAtTime(0.1, this.audioContext!.currentTime)
+          gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext!.currentTime + 0.1)
+          osc.start(this.audioContext!.currentTime)
+          osc.stop(this.audioContext!.currentTime + 0.1)
         } catch (e) {}
-      }, 150);
-    } catch (e) {}
+      }, i * 120)
+    })
   }
 
-  // Som de conclusão (sucesso)
   playSuccess() {
+    this.init()
+    if (!this.audioContext) return
     try {
-      const ctx = this.init();
-      if (!ctx) return;
-
-      // Sequência de duas notas ascendentes
-      const playNote = (freq: number, delay: number) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime + delay);
-        gain.gain.exponentialRampToValueAtTime(
-          0.001,
-          ctx.currentTime + delay + 0.15,
-        );
-        osc.start(ctx.currentTime + delay);
-        osc.stop(ctx.currentTime + delay + 0.15);
-      };
-      playNote(523, 0); // C5
-      playNote(659, 0.12); // E5
-      playNote(784, 0.24); // G5
+      const osc = this.audioContext.createOscillator()
+      const gain = this.audioContext.createGain()
+      osc.connect(gain)
+      gain.connect(this.audioContext.destination)
+      osc.frequency.value = 880
+      osc.type = 'sine'
+      gain.gain.setValueAtTime(0.12, this.audioContext.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.12)
+      osc.start(this.audioContext.currentTime)
+      osc.stop(this.audioContext.currentTime + 0.12)
     } catch (e) {}
   }
 
-  // Som de "pronto" (boot completo)
   playReady() {
+    this.init()
+    if (!this.audioContext) return
     try {
-      const ctx = this.init();
-      if (!ctx) return;
-
-      // Beep longo e grave
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(440, ctx.currentTime);
-      gain.gain.setValueAtTime(0.1, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.3);
+      const playTone = (freq: number, delay: number) => {
+        setTimeout(() => {
+          try {
+            const osc = this.audioContext!.createOscillator()
+            const gain = this.audioContext!.createGain()
+            osc.connect(gain)
+            gain.connect(this.audioContext!.destination)
+            osc.frequency.value = freq
+            osc.type = 'sine'
+            gain.gain.setValueAtTime(0.1, this.audioContext!.currentTime)
+            gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext!.currentTime + 0.06)
+            osc.start(this.audioContext!.currentTime)
+            osc.stop(this.audioContext!.currentTime + 0.06)
+          } catch (e) {}
+        }, delay)
+      }
+      playTone(660, 0)
+      playTone(880, 100)
     } catch (e) {}
   }
 }
 
-export const audio = new AudioService();
+export const audio = new AudioService()
