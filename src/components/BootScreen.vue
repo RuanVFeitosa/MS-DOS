@@ -33,9 +33,9 @@ const messages = [
   'Inicializando sistema MS-DOS 6.22...',
   'Carregando drivers de disco...',
   'Verificando memória RAM... 640K OK',
-  'Carregando interfaces de documentos RPG...',
-  'Conectando ao servidor de aventuras...',
-  'Preparando terminal interativo...'
+  'Carregando interfaces de documentos...',
+  'Conectando ao servidor...',
+  'Preparando terminal...'
 ]
 const visibleMessages = ref<string[]>([])
 const readyToContinue = ref(false)
