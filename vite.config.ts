@@ -8,7 +8,12 @@ import vueDevTools from "vite-plugin-vue-devtools";
 export default defineConfig({
   plugins: [vue(), vueDevTools()],
   base: "/MS-DOS/",
+   build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+  },
   resolve: {
+        extensions: ['.js', '.ts', '.vue', '.json'],
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
